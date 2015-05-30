@@ -1,0 +1,190 @@
+html {
+    font-family: Ubuntu;
+}
+
+#projects {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2.5em;
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid #ccc;
+    overflow: auto;
+    box-sizing: border-box;
+}
+
+#projects form {
+    float: right;
+}
+
+#projects li {
+    display: inline-block;
+    margin: 0;
+    padding:  0.5em 1em;
+    cursor: pointer;
+}
+
+#reviews {
+    position: fixed;
+    left: 0;
+    width: 20em;
+    top: 2.5em;
+    bottom: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+}
+
+#reviews li {
+    display: block;
+    padding: 0.5em 1em;
+    cursor: pointer;
+}
+li.selected {
+    background: #eef;
+}
+li:hover{
+    background: #ffc;
+}
+
+span.name {
+    font-weight: bold;
+    display: block;
+}
+
+span.review {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+span.status {
+    float: right;
+}
+
+span.status.bug:before {
+    content: "🐭";
+}
+span.status.bug.open:before {
+    color: green;
+}
+span.status.bug.closed:before {
+    color: red;
+}
+span.status.notabug:before {
+    content: "☺";
+}
+
+span.stars1:after {
+    content: " ★☆☆☆☆";
+}
+span.stars2:after {
+    content: " ★★☆☆☆";
+}
+span.stars3:after {
+    content: " ★★★☆☆";
+}
+span.stars4:after {
+    content: " ★★★★☆";
+}
+span.stars5:after {
+    content: " ★★★★★";
+}
+
+#review {
+    position: fixed;
+    left: 20em;
+    right: 0;
+    top: 2.5em;
+    bottom: 0;
+    padding: 0.5em;
+}
+
+#review > div {
+    float: left;
+}
+#review p {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+#review > form {
+    clear: both;
+}
+#reviewer {
+    font-weight: bold;
+}
+#text {
+    white-space: pre-line;
+}
+#existingbugdetails {
+    margin-left: 1em;
+    background: #eee;
+    padding: 0.5em 0.5em 0.01em 0.5em;
+}
+#existingbugtitle {
+    font-weight: bold;
+}
+#existingbugtitle span.number.open {
+    color: green;
+}
+#existingbugtitle span.number.closed {
+    color: red;
+}
+#existingbugdescription {
+    white-space: pre-line;
+}
+#newbuginput {
+    padding-left: 1em;
+    width: 100%;
+    box-sizing: border-box;
+}
+#newbuginput th {
+    font-weight: bold;
+    text-align: right;
+    vertical-align: top;
+}
+#newbuginput td {
+    width: 99%;
+}
+#newbugtitle, #newbugdescription {
+    width: 100%;
+}
+#newbugdescription {
+    height: 10em;
+}
+#save {
+    float: right;
+}
+
+.popup {
+    background: rgba(0,0,0,0.75);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: none;
+}
+.popup > * {
+    background: white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    padding: 2em;
+    border-radius: 1em;
+}
+
+#addproject > form > p:first-child {
+    margin-top: 0;
+    font-weight: bold;
+}
+#addprojectbuttons {
+    float: right;
+    margin: 0;
+}
+input.error {
+    background: rgb(255,127,127);
+}

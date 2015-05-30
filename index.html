@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Ubuntu Touch Apps</title>
+    <script>
+    var project = {};
+    var review_list = null;
+    var bug_list = null;
+    
+    function byID(id) {
+        return document.getElementById(id);
+    }
+    
+    function clear_children(id) {
+        var elem = byID(id);
+        while (elem.firstChild)
+            elem.removeChild(elem.firstChild);
+    }
+    
+    function list_selection(id, selection_id) {
+        var items = document.querySelectorAll("#" + id + " li");
+        for (var i=0; i<items.length; i++) {
+            if (items[i].id == selection_id)
+                items[i].classList.add("selected");
+            else
+                items[i].classList.remove("selected");
+        }
+    }
+    
+    function do_get(s, callback) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", s, true);
+        xhr.onload = function () { callback(xhr.response); };
+        xhr.responseType = "json";
+        xhr.send();
+    }
+    
+    function do_post(s, obj, callback) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", s, true);
+        xhr.onload = function () { callback(xhr.response); };
+        xhr.responseType = "json";
+        xhr.send(JSON.stringify(obj));
+    }
+    
+    function set_projects(project_list) {
+        var projects = byID("projects");
+        for (var i=0; i<project_list.length; i++) {
+            var elem = document.createElement("li");
+            var name = project_list[i]
+            elem.innerHTML = name;
+            elem.id = name;
+            elem.onclick = (function (name) {
+                return function () {
+                    get_project(name);
+                };
+            })(name);
+            projects.appendChild(elem);
+        }
+    }
+    
+    function get_project(name) {
+        show_popup("busy");
+        list_selection("projects", name);
+        do_get("project/" + name, load_project);
+    }
+    
+    function load_project(p) {
+        project = p
+        clear_children("reviews");
+        byID("review").hidden = true;
+        review_list = null;
+        bug_list = null;
+        do_get("reviews/" + project.appid, load_reviews);
+        do_get("bugs/" + project.lp_project, load_bugs);
+    }
+    
+    function load_reviews(r) {
+        review_list = r;
+        if (bug_list !== null)
+            set_reviews();
+    }
+    
+    function load_bugs(b) {
+        bug_list = b;
+        if (review_list !== null)
+            set_reviews();
+    }
+    
+    function set_reviews() {
+        var reviews = byID("reviews");
+        for (var i=0; i<review_list.length; i++) {
+            reviews.appendChild(review_li(review_list[i]));
+        }
+        hide_popup("busy");
+    }
+    
+    function review_li(review) {
+        var elem = document.createElement("li");
+        var status = project.review_map[review.reviewer_username];
+        var status_string = "";
+        var bug_status = "";
+        if (status !== undefined) {
+            if (status == 0) {
+                status_string = "notabug";
+            } else {
+                var bug = bug_list[status]
+                if (bug)
+                    bug_status = bug.status;
+                status_string = "bug";
+            }
+        }
+        elem.innerHTML = "<span class='status " + status_string + " stars" + review.rating + " " +
+                bug_status + "'></span><span class='name'>" + review.reviewer_displayname + "</span>" +
+                "<span class='review'>" + review.review_text + "</span>";
+        elem.id = review.reviewer_username;
+        elem.onclick = function () { load_review(review, status); };
+        return elem;
+    }
+    
+    function load_review(review, status) {
+        list_selection("reviews", review.reviewer_username);
+        
+        byID("review").hidden = false;
+        byID("reviewer").innerHTML = review.reviewer_displayname;
+        byID("rating").innerHTML = "<span class='stars" + review.rating + "'></span>";
+        byID("version").innerHTML = review.version;
+        byID("date").innerHTML = review.date_created;
+        byID("text").innerHTML = review.review_text;
+        
+        if (status !== undefined) {
+            if (status == 0) {
+                byID("notabug").checked = true;
+            } else {
+                byID("existingbug").checked = true;
+            }
+        } else {
+            byID("notabug").checked = byID("existingbug").checked = byID("newbug").checked = false;
+        }
+        
+        clear_children("bugnumber");
+        var select = byID("bugnumber");
+        var elem = document.createElement("option");
+        elem.value = "0";
+        elem.innerHTML = " ";
+        elem.selected = "selected";
+        select.appendChild(elem);
+        for (var k in bug_list) {
+            elem = document.createElement("option");
+            elem.value = k;
+            elem.innerHTML = k + ": " + bug_list[k].title;
+            if (k == status)
+                elem.selected = "selected";
+            select.appendChild(elem);
+        }
+        
+        byID("newbugtitle").value = "Bug reported in review";
+        byID("newbugdescription").value = review.review_text;
+        
+        show_actions();
+    }
+    
+    function show_actions() {
+        if (byID("existingbug").checked) {
+            var select = byID("bugnumber");
+            var bug_id = select.children[select.selectedIndex].value;
+            var bug = bug_list[bug_id];
+            if (bug) {
+                byID("existingbugtitle").innerHTML = "<span class='number " + bug.status + "'>" + bug_id +
+                    "</span> <a href='" + bug.link + "'>" + bug.title + "</a>";
+                byID("existingbugdescription").innerHTML = bug.description;
+                byID("existingbugdetails").hidden = false;
+            } else {
+                byID("existingbugdetails").hidden = true;
+            }
+        } else {
+            byID("existingbugdetails").hidden = true;
+        }
+        
+        byID("newbuginput").hidden = !byID("newbug").checked;
+    }
+    
+    function show_popup(id) {
+        var popup = byID(id);
+        popup.style.display = "block";
+        var child = popup.firstElementChild;
+        child.style.setProperty("margin-left", -child.clientWidth/2 + "px");
+        child.style.setProperty("margin-top", -child.clientHeight/2 + "px");
+        return false;
+    }
+    
+    function hide_popup(id) {
+        byID(id).style.display = "none";
+        return false;
+    }
+    
+    function show_new_project() {
+        byID("addprojectname").value = byID("addprojectid").value = byID("addprojectlaunchpad").value = "";
+        show_popup("addproject");
+        return false;
+    }
+    
+    function add_new_project() {
+        var project_name = byID("addprojectname").value;
+        var project_id = byID("addprojectid").value;
+        var project_launchpad = byID("addprojectlaunchpad").value;
+        do_post("add_project", {"name": project_name, "id": project_id, "launchpad": project_launchpad}, 
+            function (val) {
+                if (val.result == "OK") {
+                    hide_popup("addproject");
+                    set_projects([project_name]);
+                    get_project(project_name);
+                } else {
+                    byID("addproject" + val.field).classList.add("error");
+                }
+            });
+        return false;
+    }
+    
+    function unerror(elem) {
+        elem.classList.remove("error");
+    }
+    
+    function mark_review() {
+        var project_name = document.querySelector("#projects .selected").id;
+        if (byID("notabug").checked) {
+            update_review(0, project_name);
+        } else if (byID("existingbug").checked) {
+            var select = byID("bugnumber");
+            update_review(select.children[select.selectedIndex].value, project_name);
+        } else if (byID("newbug").checked) {
+            show_popup("busy");
+            var title = byID("newbugtitle").value;
+            var description = byID("newbugdescription").value;
+            do_post("new_bug", {"title": title, "description": description, "project": project_name},
+                function (val) {
+                    if (val.result == "OK") {
+                        bug_list[val.num] = {"title": title, "description": description, "status": "open",
+                            "link": val.link};
+                        update_review(val.num, project_name);
+                    }
+                });
+        }
+        return false;
+    }
+    
+    function update_review(bugnum, project_name) {
+        var old_review_li = document.querySelector("#reviews .selected");
+        var review_id = old_review_li.id;
+        var review = null;
+        for (var i=0; i<review_list.length; i++) {
+            if (review_list[i].reviewer_username == review_id) {
+                review = review_list[i];
+                break;
+            }
+        }
+        if (review === null) {
+            console.log("Error finding review");
+            return;
+        }
+
+        project.review_map[review_id] = bugnum;
+        var new_review_li = review_li(review);
+        new_review_li.classList.add("selected");
+        byID("reviews").replaceChild(new_review_li, old_review_li);
+        do_post("update_review", {"project": project_name, "review": review_id, "bug": bugnum},
+            function (val) {
+                hide_popup("busy");
+                new_review_li.onclick();
+            });
+    }
+    
+    window.onload = function () {
+        byID("review").hidden = true;
+        
+        do_get("projects", set_projects);
+        
+        var notabug = byID("notabug");
+        var existingbug = byID("existingbug");
+        var newbug = byID("newbug");
+        notabug.onchange = existingbug.onchange = newbug.onchange = show_actions;
+        
+        var select = byID("bugnumber");
+        select.onchange = function () {
+            existingbug.checked = true;
+            show_actions();
+        }
+    };
+    </script>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <ul id="projects">
+        <form onsubmit="return show_new_project()">
+            <input type="submit" value="Add" />
+        </form>
+    </ul>
+    
+    <ul id="reviews"></ul>
+    
+    <div id="review">
+        <div>
+            <p id="reviewer"></p>
+            <p id="rating"></p>
+            <p id="version"></p>
+            <p id="date"></p>
+        </div>
+        <p id="text"></p>
+        <form onsubmit="return mark_review()">
+            <p><input type="radio" name="markas" value="notabug" id="notabug" />Not a bug report</p>
+            <p><input type="radio" name="markas" value="existingbug" id="existingbug" />Existing bug
+                <select name="bugnumber" id="bugnumber"></select>
+                <div id="existingbugdetails">
+                    <p id="existingbugtitle"></p>
+                    <p id="existingbugdescription"></p>
+                </div>
+            </p>
+            <p><input type="radio" name="markas" value="newbug" id="newbug" />New bug
+                <table id="newbuginput">
+                    <tr>
+                        <th>Title</th>
+                        <td><input type="text" id="newbugtitle" /></td>
+                    </tr><tr>
+                        <th>Description</th>
+                        <td><textarea id="newbugdescription"></textarea></td>
+                    </tr>
+                </table>
+            </p>
+            <input type="submit" value="Save" id="save" />
+        </form>
+    </div>
+    
+    <div id="busy" class="popup">
+        <p>Working...</p>
+    </div>
+    
+    <div id="addproject" class="popup">
+        <form onsubmit="return add_new_project()">
+            <p>Add project...</p>
+            <p><input type="text" placeholder="Project name" id="addprojectname" oninput="unerror(this)" /></p>
+            <p><input type="text" placeholder="Application ID" id="addprojectid" oninput="unerror(this)" /></p>
+            <p><input type="text" placeholder="Launchpad project" id="addprojectlaunchpad" oninput="unerror(this)" /></p>
+            <p id="addprojectbuttons">
+                <input type="submit" value="Cancel" onclick="return hide_popup('addproject')" />
+                <input type="submit" value="Create" />
+            </p>
+        </form>
+    </div>
+</body>
+</html>
